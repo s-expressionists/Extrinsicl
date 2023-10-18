@@ -386,6 +386,8 @@
       (upgraded-array-element-type (typespec &optional env)
         (upgraded-array-element-type (^resolve-type typespec env)))
       ;; 16 Strings
+      (make-string (count &rest keys &key (element-type 'character) &allow-other-keys)
+        (apply #'make-string count :element-type (^resolve-type element-type) keys))
       ;; 17 Sequences
       (make-sequence (result-type size &key initial-element)
         (make-sequence (^resolve-type result-type) size :initial-element initial-element))
