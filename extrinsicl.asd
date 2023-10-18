@@ -10,5 +10,6 @@
    (:file "environment-access-functions" :depends-on ("type" "packages"))
    (:file "simple-aliases" :depends-on ("packages"))
    (:file "special-operators" :depends-on ("packages"))
+   (:file "variables" :depends-on ("packages"))
    (:file "install" :depends-on ("simple-aliases" "environment-access-functions"
                                                   "special-operators"))))
