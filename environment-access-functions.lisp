@@ -25,6 +25,15 @@
     (values temps args (list store)
             `(funcall #'(setf ,head) ,store ,@temps) `(,head ,@temps))))
 
+(defun ^constantp (client environment form)
+  (let ((form (clostrum:macroexpand client environment form)))
+    (typecase form
+      (symbol (typep (trucler:describe-variable client environment form)
+                     'trucler:constant-variable-description))
+      ((cons (eql quote) (cons t null)) t) ; note: assumes QUOTE has normal meaning
+      (cons nil)
+      (t t))))
+
 (defun define-environment-accessors (client environment)
   (labels
       ((describe-variable (name &optional env)
@@ -86,8 +95,8 @@
          (etypecase desig
            (class desig)
            (symbol (^find-class desig))))
-       (^resolve-type (type-specifier)
-         (resolve-type client environment type-specifier))
+       (^resolve-type (type-specifier &optional env)
+         (resolve-type client (or env environment) type-specifier))
        (retest1 (function key more-keys &rest fixed)
          (declare (dynamic-extent fixed))
          (multiple-value-call function
@@ -108,8 +117,12 @@
        ;; recursive.
        (^symbol-value (symbol)
          (funcall (clostrum:fdefinition client environment 'symbol-value) symbol))
+       ((setf ^symbol-value) (value symbol)
+         (funcall (clostrum:fdefinition client environment 'set) symbol value))
+       (current-package () (^symbol-value '*package*))
        (default-pathname-defaults () (^symbol-value '*default-pathname-defaults*))
        (pprint-table () (^symbol-value '*print-pprint-dispatch*))
+       (current-random-state () (^symbol-value '*random-state*))
        (input-stream-designator (desig)
          (etypecase desig
            (stream desig)
@@ -119,11 +132,16 @@
          (etypecase desig
            (stream desig)
            ((eql t) (^symbol-value '*terminal-io*))
-           ((eql nil) (^symbol-value '*standard-output*)))))
+           ((eql nil) (^symbol-value '*standard-output*))))
+       (package-designator (desig)
+         (etypecase desig
+           (package desig)
+           ((or string character symbol)
+            (clostrum:find-package client environment (string desig))))))
     ;; SBCL whines about &optional &key
     #+sbcl (declare (sb-ext:muffle-conditions style-warning))
     (defaliases client environment
-      ;; evaluation and compilation
+      ;; 3 Evaluation and Compilation
       (compiler-macro-function (name &optional env)
         (let ((info (describe-function name env)))
           (if (typep info '(or trucler:global-function-description
@@ -138,8 +156,17 @@
                    (if expandedp
                        (setf form expansion ever-expanded-p t)
                        (return (values form ever-expanded-p))))))
+      (special-operator-p (name)
+        (check-type name symbol)
+        (typep (describe-function name) 'trucler:special-operator-description))
+      (constantp (form &optional env) (^constantp client (or env environment) form))
       ;; proclaim?
-      ;; data and control flow
+      ;; 4 Types and Classes
+      (subtypep (ts1 ts2 &optional env)
+        (subtypep (^resolve-type ts1 env) (^resolve-type ts2 env)))
+      (typep (object tspec &optional env)
+        (typep object (^resolve-type tspec env)))
+      ;; 5 Data and Control Flow
       (apply (function &rest spreadable-arguments)
         (apply #'apply (fdesignator function) spreadable-arguments))
       (fdefinition (name) (^fdefinition name))
@@ -156,7 +183,7 @@
       (notany (predicate &rest sequences)
         (apply #'notany (fdesignator predicate) sequences))
       (get-setf-expansion (place &optional env) (^get-setf-expansion place env))
-      ;; Objects
+      ;; 7 Objects
       ;; FIXME: Method combination?
       (ensure-generic-function (function-name
                                  &rest keys
@@ -167,15 +194,67 @@
                :generic-function-class (class-designator generic-function-class)
                :method-class (class-designator method-class)
                keys))
-      ;; change-class, make-instance are generic (TODO: define anyway?)
       (find-class (name &optional (errorp t) env) (^find-class name errorp env))
-      ;; symbols
+      ;; 10 Symbols
+      (gensym (&optional (x "G"))
+        (make-symbol
+         (etypecase x
+           (string
+            (prog1
+                (concatenate 'string
+                             x (write-to-string (^symbol-value '*gensym-counter*) :base 10))
+              (incf (^symbol-value '*gensym-counter*))))
+           ((integer 0)
+            (concatenate 'string "G" (write-to-string x :base 10))))))
+      (gentemp (&optional prefix (package (current-package)))
+        (gentemp prefix (package-designator package)))
       ;; TODO: symbol-value etc are part of the runtime so we can't define them here,
       ;; but maybe we could do symbol-plist?
       (symbol-function (symbol)
         (check-type symbol symbol)
         (^fdefinition symbol))
-      ;; Conses
+      ;; 11 Packages
+      (export (symbols &optional (package (current-package)))
+        (export symbols (package-designator package)))
+      (find-symbol (string &optional (package (current-package)))
+        (find-symbol string (package-designator package)))
+      (find-package (name) (package-designator name))
+      (import (symbols &optional (package (current-package)))
+        (import symbols (package-designator package)))
+      (rename-package (package new-name &optional new-nicknames)
+        (rename-package (package-designator package) new-name new-nicknames))
+      (shadow (names &optional (package (current-package)))
+        (shadow names (package-designator package)))
+      (shadowing-import (symbols &optional (package (current-package)))
+        (shadowing-import symbols (package-designator package)))
+      (delete-package (package) (delete-package (package-designator package)))
+      (unexport (symbols &optional (package (current-package)))
+        (unexport symbols (package-designator package)))
+      (unintern (symbols &optional (package (current-package)))
+        (unintern symbols package))
+      (unuse-package (packages-to-unuse &optional (package (current-package)))
+        (let ((to-unuse (if (listp packages-to-unuse)
+                            (mapcar #'package-designator packages-to-unuse)
+                            (package-designator packages-to-unuse))))
+          (unuse-package to-unuse (package-designator package))))
+      (use-package (packages-to-use &optional (package (current-package)))
+        (let ((to-use (if (listp packages-to-use)
+                          (mapcar #'package-designator packages-to-use)
+                          (package-designator packages-to-use))))
+          (use-package to-use (package-designator package))))
+      (intern (string &optional (package (current-package)))
+        (intern string (package-designator package)))
+      (package-name (package) (package-name (package-designator package)))
+      (package-nicknames (package) (package-nicknames (package-designator package)))
+      (package-shadowing-symbols (package)
+        (package-shadowing-symbols (package-designator package)))
+      (package-use-list (package) (package-use-list (package-designator package)))
+      (package-used-by-list (package) (package-used-by-list (package-designator package)))
+      ;; 12 Numbers
+      (make-random-state (&optional state)
+        (make-random-state (if (null state) (current-random-state) state)))
+      (random (limit &optional (state (current-random-state))) (random limit state))
+      ;; 14 Conses
       (sublis (alist tree
                      &rest keys
                      &key (key 'identity) (test 'eql testp) (test-not nil test-not-p)
@@ -291,8 +370,7 @@
       (adjust-array (array dimensions &rest keys &key (element-type t) &allow-other-keys)
         (apply #'adjust-array array dimensions :element-type (^resolve-type element-type) keys))
       (upgraded-array-element-type (typespec &optional env)
-        (declare (ignore env)) ; FIXME? Not sure about this
-        (upgraded-array-element-type (^resolve-type typespec)))
+        (upgraded-array-element-type (^resolve-type typespec env)))
       ;; 16 Strings
       ;; 17 Sequences
       (make-sequence (result-type size &key initial-element)
@@ -457,7 +535,9 @@
       (copy-pprint-dispatch (&optional (table (pprint-table))) (copy-pprint-dispatch table))
       (pprint-dispatch (object &optional (table (pprint-table)))
         (pprint-dispatch object table))
-      ;; losing steam here
+      ;; 24 System Construction
+      (provide (module-name)
+        (pushnew module-name (^symbol-value '*modules*) :test #'string=))
       ;; 25 Environment
       (describe (object &optional stream)
         (describe object (output-stream-designator stream))))))

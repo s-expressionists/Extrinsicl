@@ -25,8 +25,7 @@
     symbolp keywordp make-symbol gentemp symbol-name symbol-package
     ;; 11 Packages
     ;; many of the functions not listed here implicitly read *package*
-    find-all-symbols list-all-packages rename-package delete-package make-package
-    package-name package-nicknames package-shadowing-symbols
+    package-shadowing-symbols
     package-use-list package-used-by-list packagep package-error-package
     ;; 12 Numbers
     = /= < > <= >= max min minusp plusp zerop floor ffloor ceiling fceiling
