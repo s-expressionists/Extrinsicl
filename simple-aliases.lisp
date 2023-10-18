@@ -55,7 +55,7 @@
     copy-tree copy-list list list* list-length listp make-list
     first second third fourth fifth sixth seventh eighth ninth tenth
     nth endp null nconc append revappend nreconc butlast nbutlast last ldiff tailp
-    nthcdr rest acons copy-alist pairlis getf
+    nthcdr rest acons copy-alist pairlis get-properties getf
     ;; 15 Arrays
     adjustable-array-p aref array-dimension array-dimensions array-element-type
     array-has-fill-pointer-p array-displacement array-in-bounds-p array-rank
