@@ -5,4 +5,5 @@
   (define-simple-function-aliases client environment)
   (define-simple-class-aliases client environment)
   (define-simple-constant-aliases client environment)
+  (define-variables client environment)
   (define-environment-accessors client environment))
