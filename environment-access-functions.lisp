@@ -47,6 +47,7 @@
            (if (typep info 'trucler:macro-description)
                (trucler:expander info)
                nil)))
+       (macroexpand-hook () (fdesignator (^symbol-value '*macroexpand-hook*)))
        (^macroexpand-1 (form &optional env)
          (let ((expander
                  (typecase form
@@ -54,7 +55,7 @@
                    (cons (and (symbolp (car form)) (^macro-function (car form) env)))
                    (t nil))))
            (if expander
-               (values (funcall (^symbol-value '*macroexpand-hook*) expander form env) t)
+               (values (funcall (macroexpand-hook) expander form env) t)
                (values form nil))))
        (setf-expander (name &optional env)
          (let ((info (describe-function name env)))
