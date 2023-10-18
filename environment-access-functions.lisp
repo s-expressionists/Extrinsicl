@@ -120,6 +120,8 @@
            (stream desig)
            ((eql t) (^symbol-value '*terminal-io*))
            ((eql nil) (^symbol-value '*standard-output*)))))
+    ;; SBCL whines about &optional &key
+    #+sbcl (declare (sb-ext:muffle-conditions style-warning))
     (defaliases client environment
       ;; evaluation and compilation
       (compiler-macro-function (name &optional env)
