@@ -44,6 +44,10 @@
                (let ((expansion (trucler:expansion info)))
                  (lambda (form env) (declare (ignore form env)) expansion))
                nil)))
+       (^symbol-plist (symbol)
+         (clostrum:symbol-plist client environment symbol))
+       ((setf ^symbol-plist) (new symbol)
+         (setf (clostrum:symbol-plist client environment symbol) new))
        (describe-function (name &optional env)
          (trucler:describe-function client (or env environment) name))
        (^fdefinition (name) (clostrum:fdefinition client environment name))
@@ -205,6 +209,17 @@
                keys))
       (find-class (name &optional (errorp t) env) (^find-class name errorp env))
       ;; 10 Symbols
+      (copy-symbol (symbol &optional copy-props)
+        (let ((new (make-symbol (symbol-name symbol))))
+          (when copy-props
+            (when (funcall (clostrum:fdefinition client environment 'boundp) symbol)
+              (setf (^symbol-value new) (^symbol-value symbol)))
+            (when (clostrum:fboundp client environment symbol)
+              (setf (clostrum:fdefinition client environment new)
+                    (clostrum:fdefinition client environment symbol)))
+            (setf (clostrum:symbol-plist client environment new)
+                  (clostrum:symbol-plist client environment symbol)))
+          new))
       (gensym (&optional (x "G"))
         (make-symbol
          (etypecase x
@@ -222,6 +237,10 @@
       (symbol-function (symbol)
         (check-type symbol symbol)
         (^fdefinition symbol))
+      (symbol-plist (symbol) (^symbol-plist symbol))
+      (get (symbol indicator &optional default)
+        (getf (^symbol-plist symbol) indicator default))
+      (remprop (symbol indicator) (remf (^symbol-plist symbol) indicator))
       ;; 11 Packages
       (export (symbols &optional (package (current-package)))
         (export symbols (package-designator package)))
