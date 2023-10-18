@@ -7,4 +7,5 @@
   (define-simple-constant-aliases client environment)
   (define-variables client environment)
   (define-environment-accessors client environment)
-  (define-generic-environment-accessors client environment))
+  (define-generic-environment-accessors client environment)
+  (define-loop client environment))
