@@ -106,7 +106,7 @@
     short-site-name long-site-name machine-instance machine-type machine-version
     software-type software-version user-homedir-pathname))
 
-(defun define-simple-function-aliases (client environment)
+(defun install-simple-function-aliases (client environment)
   (loop for name in *simple-function-aliases*
         for f = (fdefinition name)
         do (setf (clostrum:fdefinition client environment name) f)))
@@ -144,7 +144,7 @@
     internal-time-units-per-second
     ))
 
-(defun define-simple-constant-aliases (client environment)
+(defun install-simple-constant-aliases (client environment)
   (loop for name in *simple-constant-aliases*
         for v = (symbol-value name)
         do (clostrum:make-constant client environment name v)))
@@ -199,7 +199,7 @@
     ;; 24 System Construction, Environment
     ))
 
-(defun define-simple-class-aliases (client environment)
+(defun install-simple-class-aliases (client environment)
   (loop for name in *simple-class-aliases*
         for class = (find-class name)
         do (setf (clostrum:find-class client environment name) class)))

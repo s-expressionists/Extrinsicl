@@ -31,7 +31,7 @@
     *query-io* *random-state* *readtable* *standard-input* *standard-output*
     *terminal-io* *trace-output*))
 
-(defun define-variables (client environment)
+(defun install-variables (client environment)
   (loop for (name value) in *valued-variables*
         do (clostrum:make-parameter client environment name value))
   (loop for name in *alias-variables*

@@ -34,7 +34,7 @@
       (cons nil)
       (t t))))
 
-(defun define-environment-accessors (client environment)
+(defun install-environment-accessors (client environment)
   (labels
       ((describe-variable (name &optional env)
          (trucler:describe-variable client (or env environment) name))
@@ -625,7 +625,7 @@
         name
         nil)))
 
-(defun define-generic-environment-accessors (client environment)
+(defun install-generic-environment-accessors (client environment)
   ;; Yikes. But I can't think of a better way to do this without using MOP magic
   ;; that would be fairly arcane (to mimic defmethod, etc.)
   (let ((change-class (make-symbol "CHANGE-CLASS"))
