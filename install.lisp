@@ -8,4 +8,5 @@
   (install-variables client environment)
   (install-environment-accessors client environment)
   (install-generic-environment-accessors client environment)
+  (install-common-macros client environment)
   (install-loop client environment))
