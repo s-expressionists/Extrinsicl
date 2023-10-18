@@ -461,3 +461,58 @@
       ;; 25 Environment
       (describe (object &optional stream)
         (describe object (output-stream-designator stream))))))
+
+(defun class-proper-name (client environment class)
+  (let ((name (class-name class)))
+    (if (eql (clostrum:find-class client environment name nil) class)
+        name
+        nil)))
+
+(defun define-generic-environment-accessors (client environment)
+  ;; Yikes. But I can't think of a better way to do this without using MOP magic
+  ;; that would be fairly arcane (to mimic defmethod, etc.)
+  (let ((change-class (make-symbol "CHANGE-CLASS"))
+        (make-instance (make-symbol "MAKE-INSTANCE"))
+        (make-instances-obsolete (make-symbol "MAKE-INSTANCES-OBSOLETE"))
+        (make-load-form (make-symbol "MAKE-LOAD-FORM")))
+    (eval `(defgeneric ,change-class (instance new-class &key &allow-other-keys)
+             (:method ((instance standard-object) (new-class standard-class) &rest initargs)
+               ;; use the host change-class.
+               (apply #'change-class instance new-class initargs))
+             (:method ((instance t) (new-class symbol) &rest initargs)
+               (apply (function ,change-class) instance
+                      ;; we use the client and environment as literals here.
+                      (clostrum:find-class ',client ',environment new-class) initargs))))
+    (eval `(defgeneric ,make-instance (class &rest initargs &key &allow-other-keys)
+             (:method ((class standard-class) &rest initargs)
+               (apply #'make-instance class initargs)) ; host make-instance
+             (:method ((class symbol) &rest initargs)
+               (apply (function ,make-instance)
+                      (clostrum:find-class ',client ',environment class)
+                      initargs))))
+    (eval `(defgeneric ,make-instances-obsolete (class)
+             (:method ((class standard-class)) (make-instances-obsolete class))
+             (:method ((class symbol))
+               (,make-instances-obsolete
+                (clostrum:find-class ',client ',environment class)))))
+    (eval `(defgeneric ,make-load-form (object &optional env)
+             (:method ((object standard-object) &optional env)
+               (declare (ignore env))
+               (error "No ~s defined for ~s" 'make-load-form object))
+             (:method ((object structure-object) &optional env)
+               (declare (ignore env))
+               (error "No ~s defined for ~s" 'make-load-form object))
+             (:method ((object condition) &optional env)
+               (declare (ignore env))
+               (error "No ~s defined for ~s" 'make-load-form object))
+             (:method ((object class) &optional env)
+               (let ((name (class-proper-name ',client (or env ',environment) object)))
+                 (if name
+                     (values `(find-class ',name) nil)
+                     (error "~s lacks a proper name" object))))))
+    (setf (clostrum:fdefinition client environment 'make-instance) (fdefinition make-instance)
+          (clostrum:fdefinition client environment 'change-class) (fdefinition change-class)
+          (clostrum:fdefinition client environment 'make-instances-obsolete)
+          (fdefinition make-instances-obsolete)
+          (clostrum:fdefinition client environment 'make-load-form) (fdefinition make-load-form)))
+  nil)
