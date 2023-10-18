@@ -110,6 +110,14 @@
                (t
                 (multiple-value-call function (values-list fixed)
                   :key (fdesignator key) :test (fdesignator test) more-keys))))
+       (rebind-read (thunk)
+         "Call THUNK with the host reader variables rebound to the environment's."
+         (let ((*read-base* (^symbol-value '*read-base*))
+               (*read-default-float-format* (^symbol-value '*read-default-float-format*))
+               (*read-eval* (^symbol-value '*read-eval*))
+               (*read-suppress* (^symbol-value '*read-suppress*))
+               (*readtable* (creadtable)))
+           (funcall thunk)))
        ;; since symbol-value's implementation is part of the evaluator runtime,
        ;; we can't define it in this system. But we do sometimes need to grab symbol values,
        ;; for other functions, so we assume that SYMBOL-VALUE will be defined later.
@@ -120,6 +128,7 @@
        ((setf ^symbol-value) (value symbol)
          (funcall (clostrum:fdefinition client environment 'set) symbol value))
        (current-package () (^symbol-value '*package*))
+       (creadtable () (^symbol-value '*readtable*))
        (default-pathname-defaults () (^symbol-value '*default-pathname-defaults*))
        (pprint-table () (^symbol-value '*print-pprint-dispatch*))
        (current-random-state () (^symbol-value '*random-state*))
@@ -552,6 +561,38 @@
       (copy-pprint-dispatch (&optional (table (pprint-table))) (copy-pprint-dispatch table))
       (pprint-dispatch (object &optional (table (pprint-table)))
         (pprint-dispatch object table))
+      ;; 23 Reader
+      (copy-readtable (&optional (from (creadtable)) to) (copy-readtable from to))
+      (make-dispatch-macro-character (char &optional non-terminating-p
+                                           (readtable (creadtable)))
+        (make-dispatch-macro-character char non-terminating-p readtable))
+      (read (&optional stream (eof-error-p t) eof-value recursivep)
+        (rebind-read
+         (lambda ()
+           (read (input-stream-designator stream) eof-error-p eof-value recursivep))))
+      (read-preserving-whitespace (&optional stream (eof-error-p t) eof-value recursivep)
+        (rebind-read
+         (lambda () (read-preserving-whitespace (input-stream-designator stream)
+                                                eof-error-p eof-value recursivep))))
+      (read-delimited-list (char &optional stream recursivep)
+        (rebind-read
+         (lambda () (read-delimited-list char (input-stream-designator stream) recursivep))))
+      (read-from-string (string &optional (eof-error-p t) eof-value
+                                &rest keys &key &allow-other-keys)
+        (rebind-read
+         (lambda () (apply #'read-from-string string eof-error-p eof-value keys))))
+      (set-dispatch-macro-character (disp-char sub-char new-function
+                                               &optional (readtable (creadtable)))
+        (set-dispatch-macro-character disp-char sub-char new-function readtable))
+      (get-dispatch-macro-character (disp-char sub-char &optional (readtable (creadtable)))
+        (get-dispatch-macro-character disp-char sub-char readtable))
+      (set-macro-character (char function
+                                 &optional non-terminating-p (readtable (creadtable)))
+        (set-macro-character char function non-terminating-p readtable))
+      (get-macro-character (char &optional (readtable (creadtable)))
+        (get-macro-character char readtable))
+      (set-syntax-from-char (to-char from-char &optional (to-rt (creadtable)) from-rt)
+        (set-syntax-from-char to-char from-char to-rt from-rt))
       ;; 24 System Construction
       (provide (module-name)
         (pushnew module-name (^symbol-value '*modules*) :test #'string=))
