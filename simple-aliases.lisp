@@ -3,7 +3,7 @@
 (defparameter *simple-function-aliases*
   '(;; 3 Evaluation and Compilation
     ;; 4 Types and Classes
-    type-error-datum type-error-expected-type
+    type-of type-error-datum type-error-expected-type
     ;; 5 Data and Control Flow
     function-lambda-expression functionp compiled-function-p
     not eq eql equal equalp identity complement constantly
@@ -14,6 +14,7 @@
     update-instance-for-different-class update-instance-for-redefined-class
     slot-boundp slot-exists-p slot-makunbound slot-missing slot-unbound slot-value
     method-qualifiers no-applicable-method no-next-method remove-method
+    compute-applicable-methods
     find-method add-method initialize-instance class-name (setf class-name)
     class-of unbound-slot-instance
     ;; 8 Structures

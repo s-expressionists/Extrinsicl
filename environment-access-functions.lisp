@@ -254,6 +254,8 @@
       (make-random-state (&optional state)
         (make-random-state (if (null state) (current-random-state) state)))
       (random (limit &optional (state (current-random-state))) (random limit state))
+      (upgraded-complex-part-type (typespec &optional env)
+        (upgraded-complex-part-type (^resolve-type typespec env)))
       ;; 14 Conses
       (sublis (alist tree
                      &rest keys
@@ -481,6 +483,7 @@
                                    &allow-other-keys)
         (retest2 #'delete-duplicates key test testp test-not test-not-p keys sequence))
       ;; 18 Hash Tables
+      (maphash (function hash-table) (maphash (fdesignator function) hash-table))
       ;; 19 Filenames
       (make-pathname (&rest keys &key &allow-other-keys)
         (let ((*default-pathname-defaults* (default-pathname-defaults)))
