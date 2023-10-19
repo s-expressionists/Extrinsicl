@@ -10,10 +10,12 @@
   ((:file "packages")
    (:file "type" :depends-on ("packages"))
    (:file "environment-access-functions" :depends-on ("type" "packages"))
+   (:file "setf-expansions" :depends-on ("environment-access-functions" "packages"))
    (:file "common-macros" :depends-on ("packages"))
    (:file "loop" :depends-on ("packages"))
    (:file "simple-aliases" :depends-on ("packages"))
    (:file "special-operators" :depends-on ("packages"))
    (:file "variables" :depends-on ("packages"))
    (:file "install" :depends-on ("loop" "simple-aliases" "environment-access-functions"
-                                        "common-macros" "special-operators"))))
+                                        "setf-expansions" "common-macros"
+                                        "special-operators"))))

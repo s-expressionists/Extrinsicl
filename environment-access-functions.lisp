@@ -1,15 +1,20 @@
 (in-package #:extrinsicl)
 
 (defmacro defaliases (client environment &body aliases)
-  (let ((asyms (loop for (name) in aliases collect (make-symbol (symbol-name name))))
+  (let ((fnames
+          (loop for (name) in aliases
+                collect (etypecase name
+                          (symbol (make-symbol (symbol-name name)))
+                          ((cons (eql setf) (cons symbol null))
+                           `(setf ,(make-symbol (symbol-name (second name))))))))
         (csym (gensym "CLIENT")) (esym (gensym "ENVIRONMENT")))
     `(flet
          (,@(loop for (name lambda-list . body) in aliases
-                  for asym in asyms
-                  collect `(,asym ,lambda-list ,@body)))
+                  for fname in fnames
+                  collect `(,fname ,lambda-list ,@body)))
        (loop with ,csym = ,client with ,esym = ,environment
              for n in '(,@(loop for (name) in aliases collect name))
-             for f in (list ,@(loop for asym in asyms collect `(function ,asym)))
+             for f in (list ,@(loop for fname in fnames collect `(function ,fname)))
              do (setf (clostrum:fdefinition ,csym ,esym n) f)))))
 
 (defun default-symbol-setf-expansion (symbol)
@@ -24,6 +29,24 @@
          (store (gensym "STORE")))
     (values temps args (list store)
             `(funcall #'(setf ,head) ,store ,@temps) `(,head ,@temps))))
+
+(defun ^get-setf-expansion (client environment place)
+  (etypecase place
+    (symbol (multiple-value-bind (expansion expandedp)
+                (clostrum:macroexpand-1 client environment place)
+              (if expandedp
+                  (^get-setf-expansion client environment expansion)
+                  (default-symbol-setf-expansion place))))
+    (cons (let ((head (car place)))
+            (unless (symbolp head) (error "Invalid place: ~s" place)) ; FIXME better error
+            (let ((expander (clostrum:setf-expander client environment head)))
+              (if expander
+                  (funcall expander place environment)
+                  (multiple-value-bind (expansion expandedp)
+                      (clostrum:macroexpand-1 client environment place)
+                    (if expandedp
+                        (^get-setf-expansion client environment expansion)
+                        (default-cons-setf-expansion place)))))))))
 
 (defun ^constantp (client environment form)
   (let ((form (clostrum:macroexpand client environment form)))
@@ -70,29 +93,6 @@
            (if expander
                (values (funcall (macroexpand-hook) expander form env) t)
                (values form nil))))
-       (setf-expander (name &optional env)
-         (let ((info (describe-function name env)))
-           (if (typep info '(or trucler:global-function-description
-                             trucler:global-macro-description))
-               (clostrum:setf-expander client environment name)
-               nil)))
-       (^get-setf-expansion (place &optional env)
-         (etypecase place
-           (symbol (multiple-value-bind (expansion expandedp)
-                       (^macroexpand-1 place env)
-                     (if expandedp
-                         (^get-setf-expansion expansion env)
-                         (default-symbol-setf-expansion place))))
-           (cons (let ((head (car place)))
-                   (unless (symbolp head) (error "Invalid place: ~s" place)) ; FIXME
-                   (let ((expander (setf-expander head env)))
-                     (if expander
-                         (funcall expander place env)
-                         (multiple-value-bind (expansion expandedp)
-                             (^macroexpand-1 place env)
-                           (if expandedp
-                               (^get-setf-expansion expansion env)
-                               (default-cons-setf-expansion place)))))))))
        (^find-class (name &optional (errorp t) env)
          (clostrum:find-class client (or env environment) name errorp))
        (class-designator (desig)
@@ -161,7 +161,13 @@
                             trucler:global-macro-description))
               (trucler:compiler-macro info)
               nil)))
+      ((setf compiler-macro-function) (function name &optional env)
+        (check-type env null)
+        (setf (clostrum:compiler-macro-function client environment name) function))
       (macro-function (name &optional env) (^macro-function name env))
+      ((setf macro-function) (function name &optional env)
+        (check-type env null)
+        (setf (clostrum:macro-function client environment name) function))
       (macroexpand-1 (form &optional env) (^macroexpand-1 form env))
       (macroexpand (form &optional env)
         (loop with ever-expanded-p = nil
@@ -183,6 +189,8 @@
       (apply (function &rest spreadable-arguments)
         (apply #'apply (fdesignator function) spreadable-arguments))
       (fdefinition (name) (^fdefinition name))
+      ((setf fdefinition) (function name)
+        (setf (clostrum:fdefinition client environment name) function))
       (fboundp (name) (clostrum:fboundp client environment name))
       (fmakunbound (name) (clostrum:fmakunbound client environment name))
       (funcall (function &rest arguments)
@@ -195,7 +203,8 @@
         (apply #'notevery (fdesignator predicate) sequences))
       (notany (predicate &rest sequences)
         (apply #'notany (fdesignator predicate) sequences))
-      (get-setf-expansion (place &optional env) (^get-setf-expansion place env))
+      (get-setf-expansion (place &optional env)
+        (^get-setf-expansion client (or env environment) place))
       ;; 7 Objects
       ;; FIXME: Method combination?
       (ensure-generic-function (function-name
@@ -208,6 +217,9 @@
                :method-class (class-designator method-class)
                keys))
       (find-class (name &optional (errorp t) env) (^find-class name errorp env))
+      ((setf find-class) (class name &optional errorp env)
+        (declare (ignore errorp env)) ; FIXME: Not sure about ignoring env.
+        (setf (clostrum:find-class client environment name) class))
       ;; 10 Symbols
       (copy-symbol (symbol &optional copy-props)
         (let ((new (make-symbol (symbol-name symbol))))
@@ -237,9 +249,16 @@
       (symbol-function (symbol)
         (check-type symbol symbol)
         (^fdefinition symbol))
+      ((setf symbol-function) (function symbol)
+        (check-type symbol symbol)
+        (setf (clostrum:fdefinition client environment symbol) function))
       (symbol-plist (symbol) (^symbol-plist symbol))
+      ((setf symbol-plist) (plist symbol) (setf (^symbol-plist symbol) plist))
       (get (symbol indicator &optional default)
         (getf (^symbol-plist symbol) indicator default))
+      ((setf get) (new symbol indicator &optional default)
+        (declare (ignore default))
+        (setf (getf (^symbol-plist symbol) indicator) new))
       (remprop (symbol indicator) (remf (^symbol-plist symbol) indicator))
       ;; 11 Packages
       (export (symbols &optional (package (current-package)))

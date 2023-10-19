@@ -9,4 +9,6 @@
   (install-environment-accessors client environment)
   (install-generic-environment-accessors client environment)
   (install-common-macros client environment)
-  (install-loop client environment))
+  (install-loop client environment)
+  (install-setf-functions client environment)
+  (install-setf-expanders client environment))
