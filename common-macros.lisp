@@ -9,7 +9,8 @@
     pushnew remf handler-case ignore-errors in-package check-type dolist
     dotimes do do* setf psetf psetq restart-case typecase etypecase ctypecase
     with-accessors with-input-from-string with-open-file with-open-stream
-    with-output-to-string with-simple-restart with-slots))
+    with-output-to-string with-simple-restart with-slots
+    do-symbols do-external-symbols do-all-symbols))
 
 (defun install-common-macros (client environment)
   (loop for name in *common-macros*
