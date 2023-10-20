@@ -12,6 +12,7 @@
   (when compilation-environment
     (install-proclaim client environment compilation-environment))
   (install-common-macros client environment)
+  (install-format client environment)
   (install-loop client environment)
   (install-setf-functions client environment)
   (install-setf-expanders client environment))

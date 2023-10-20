@@ -5,6 +5,7 @@
   :license "BSD"
   :depends-on (#:clostrum #:trucler
                           #:common-macro-definitions ; various
+                          #:invistra-extrinsic ; format
                           #:khazern-extrinsic) ; loop
   :components
   ((:file "packages")
@@ -16,6 +17,7 @@
    (:file "setf-expansions" :depends-on ("setf" "defaliases" "packages"))
    (:file "common-macros" :depends-on ("packages"))
    (:file "loop" :depends-on ("packages"))
+   (:file "format" :depends-on ("defaliases" "packages"))
    (:file "simple-aliases" :depends-on ("packages"))
    (:file "condition-system-aliases" :depends-on ("defaliases" "packages"))
    (:file "special-operators" :depends-on ("packages"))
