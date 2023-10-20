@@ -24,3 +24,9 @@
    (:file "install" :depends-on ("loop" "simple-aliases" "environment-access-functions"
                                         "setf-expansions" "common-macros"
                                         "special-operators"))))
+
+(defsystem "extrinsicl/maclina"
+  :author ("Bike <aeshtaer@gmail.com>")
+  :license "BSD"
+  :depends-on (#:clostrum #:maclina)
+  :components ((:file "maclina")))
