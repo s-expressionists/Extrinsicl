@@ -5,6 +5,7 @@
   :license "BSD"
   :depends-on (#:clostrum #:trucler
                           #:common-macro-definitions ; various
+                          #:closer-mop ; make-load-form-saving-slots
                           #:invistra-extrinsic ; format
                           #:khazern-extrinsic) ; loop
   :components
@@ -20,6 +21,7 @@
    (:file "format" :depends-on ("defaliases" "packages"))
    (:file "simple-aliases" :depends-on ("packages"))
    (:file "condition-system-aliases" :depends-on ("defaliases" "packages"))
+   (:file "make-load-form-saving-slots" :depends-on ("defaliases" "packages"))
    (:file "special-operators" :depends-on ("packages"))
    (:file "compilation-environment" :depends-on ("special-operators" "packages"))
    (:file "variables" :depends-on ("packages"))
