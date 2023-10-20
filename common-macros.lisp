@@ -10,7 +10,7 @@
     dotimes do do* setf psetf psetq restart-case typecase etypecase ctypecase
     with-accessors with-input-from-string with-open-file with-open-stream
     with-output-to-string with-simple-restart with-slots
-    do-symbols do-external-symbols do-all-symbols))
+    do-symbols do-external-symbols do-all-symbols define-setf-expander))
 
 (defun install-common-macros (client environment)
   (loop for name in *common-macros*

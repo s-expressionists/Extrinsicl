@@ -8,6 +8,7 @@
   (install-variables client environment)
   (install-environment-accessors client environment)
   (install-generic-environment-accessors client environment)
+  (install-condition-system-aliases client environment)
   (when compilation-environment
     (install-proclaim client environment compilation-environment))
   (install-common-macros client environment)

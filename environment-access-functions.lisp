@@ -1,22 +1,5 @@
 (in-package #:extrinsicl)
 
-(defmacro defaliases (client environment &body aliases)
-  (let ((fnames
-          (loop for (name) in aliases
-                collect (etypecase name
-                          (symbol (make-symbol (symbol-name name)))
-                          ((cons (eql setf) (cons symbol null))
-                           `(setf ,(make-symbol (symbol-name (second name))))))))
-        (csym (gensym "CLIENT")) (esym (gensym "ENVIRONMENT")))
-    `(flet
-         (,@(loop for (name lambda-list . body) in aliases
-                  for fname in fnames
-                  collect `(,fname ,lambda-list ,@body)))
-       (loop with ,csym = ,client with ,esym = ,environment
-             for n in '(,@(loop for (name) in aliases collect name))
-             for f in (list ,@(loop for fname in fnames collect `(function ,fname)))
-             do (setf (clostrum:fdefinition ,csym ,esym n) f)))))
-
 (defun ^constantp (client environment form)
   (let ((form (clostrum:macroexpand client environment form)))
     (typecase form
@@ -91,6 +74,18 @@
                (*read-suppress* (^symbol-value '*read-suppress*))
                (*readtable* (creadtable)))
            (funcall thunk)))
+       (rebind-write (thunk)
+         "Call THUNK with the host reader variables rebound to the environment's."
+         (macrolet ((with-vars ((&rest vars) &body body)
+                      `(let* (,@(loop for var in vars
+                                      collect `(,var (^symbol-value ',var))))
+                         ,@body)))
+           (with-vars (*print-array* *print-base* *print-radix* *print-case*
+                                     *print-circle* *print-escape* *print-gensym*
+                                     *print-level* *print-length* *print-lines*
+                                     *print-miser-width* *print-pprint-dispatch*
+                                     *print-pretty* *print-readably* *print-right-margin*)
+             (funcall thunk))))
        ;; since symbol-value's implementation is part of the evaluator runtime,
        ;; we can't define it in this system. But we do sometimes need to grab symbol values,
        ;; for other functions, so we assume that SYMBOL-VALUE will be defined later.
@@ -188,7 +183,11 @@
       (find-class (name &optional (errorp t) env) (^find-class name errorp env))
       ((setf find-class) (class name &optional errorp env)
         (declare (ignore errorp env)) ; FIXME: Not sure about ignoring env.
-        (setf (clostrum:find-class client environment name) class))
+       (setf (clostrum:find-class client environment name) class))
+      ;; 9 Conditions
+      (invoke-debugger (condition)
+        (let ((*debugger-hook* (^symbol-value '*debugger-hook*)))
+          (invoke-debugger condition)))
       ;; 10 Symbols
       (copy-symbol (symbol &optional copy-props)
         (let ((new (make-symbol (symbol-name symbol))))
@@ -568,6 +567,51 @@
       (copy-pprint-dispatch (&optional (table (pprint-table))) (copy-pprint-dispatch table))
       (pprint-dispatch (object &optional (table (pprint-table)))
         (pprint-dispatch object table))
+      ;; These are defined to accept but ignore atsignp.
+      (pprint-fill (stream object &optional (colonp t) atsignp)
+        (declare (ignore atsignp))
+        (rebind-write (lambda () (pprint-fill stream object colonp))))
+      (pprint-linear (stream object &optional (colonp t) atsignp)
+        (declare (ignore atsignp))
+        (rebind-write (lambda () (pprint-linear stream object colonp))))
+      (pprint-tabular (stream object &optional (colonp t) atsignp)
+        (declare (ignore atsignp))
+        (rebind-write (lambda () (pprint-tabular stream object colonp))))
+      (pprint-indent (relative-to n &optional stream)
+        (rebind-write (lambda () (pprint-indent relative-to n
+                                                (output-stream-designator stream)))))
+      (pprint-newline (kind &optional stream)
+        (rebind-write (lambda () (pprint-newline kind (output-stream-designator stream)))))
+      (pprint-tab (kind colnum colinc &optional stream)
+        (rebind-write (lambda () (pprint-tab kind colnum colinc
+                                             (output-stream-designator stream)))))
+      ;; The standard isn't explicit about whether a function name, if used, can be
+      ;; resolved immediately. Out of an abundance of caution we do delay.
+      (set-pprint-dispatch (type-specifier function &optional priority (table (pprint-table)))
+        (set-pprint-dispatch (^resolve-type type-specifier)
+                             (typecase function
+                               ((or null function) function)
+                               (t ; assume a function name.
+                                (lambda (stream object)
+                                  (funcall (^fdefinition function) stream object))))
+                             priority table))
+      (write (object &rest keys &key stream &allow-other-keys)
+        (rebind-write (lambda ()
+                        (apply #'write :stream (output-stream-designator stream) keys))))
+      (prin1 (object &optional stream)
+        (rebind-write (lambda () (prin1 object (output-stream-designator stream)))))
+      (print (object &optional stream)
+        (rebind-write (lambda () (print object (output-stream-designator stream)))))
+      (pprint (object &optional stream)
+        (rebind-write (lambda () (pprint object (output-stream-designator stream)))))
+      (princ (object &optional stream)
+        (rebind-write (lambda () (princ object (output-stream-designator stream)))))
+      (write-to-string (object &rest keys &key &allow-other-keys)
+        (rebind-write (lambda () (apply #'write-to-string object keys))))
+      (prin1-to-string (object &rest keys &key &allow-other-keys)
+        (rebind-write (lambda () (apply #'prin1-to-string object keys))))
+      (princ-to-string (object &rest keys &key &allow-other-keys)
+        (rebind-write (lambda () (apply #'princ-to-string object keys))))
       ;; 23 Reader
       (copy-readtable (&optional (from (creadtable)) to) (copy-readtable from to))
       (make-dispatch-macro-character (char &optional non-terminating-p

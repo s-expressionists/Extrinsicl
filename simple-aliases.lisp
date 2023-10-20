@@ -22,6 +22,8 @@
     ;; 9 Conditions
     cell-error-name invalid-method-error method-combination-error
     simple-condition-format-control simple-condition-format-arguments
+    break compute-restarts find-restart invoke-restart invoke-restart-interactively
+    restart-name abort continue muffle-warning store-value use-value
     ;; 10 Symbols
     symbolp keywordp make-symbol gentemp symbol-name symbol-package
     ;; 11 Packages
@@ -95,6 +97,9 @@
     concatenated-stream-streams make-concatenated-stream get-output-stream-string
     make-string-input-stream make-string-output-stream stream-error-stream
     ;; 22 Printer
+    ;; we include print-object on the theory that it's not called by the user;
+    ;; as such it's only called from within the normal print functions, which have
+    ;; taken care of binding the printer variables appropriately.
     print-object print-not-readable-object
     ;; 23 Reader
     readtable-case readtablep
