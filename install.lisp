@@ -1,6 +1,6 @@
 (in-package #:extrinsicl)
 
-(defun install-cl (client environment)
+(defun install-cl (client environment &optional compilation-environment)
   (install-special-operators client environment)
   (install-simple-function-aliases client environment)
   (install-simple-class-aliases client environment)
@@ -8,6 +8,8 @@
   (install-variables client environment)
   (install-environment-accessors client environment)
   (install-generic-environment-accessors client environment)
+  (when compilation-environment
+    (install-proclaim client environment compilation-environment))
   (install-common-macros client environment)
   (install-loop client environment)
   (install-setf-functions client environment)

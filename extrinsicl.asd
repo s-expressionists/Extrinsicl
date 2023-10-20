@@ -11,6 +11,7 @@
    (:file "type" :depends-on ("packages"))
    (:file "setf" :depends-on ("packages"))
    (:file "environment-access-functions" :depends-on ("setf" "type" "packages"))
+   (:file "proclaim" :depends-on ("type" "packages"))
    (:file "setf-expansions" :depends-on ("setf" "environment-access-functions" "packages"))
    (:file "common-macros" :depends-on ("packages"))
    (:file "loop" :depends-on ("packages"))
