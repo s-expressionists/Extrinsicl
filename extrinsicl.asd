@@ -16,6 +16,7 @@
    (:file "loop" :depends-on ("packages"))
    (:file "simple-aliases" :depends-on ("packages"))
    (:file "special-operators" :depends-on ("packages"))
+   (:file "compilation-environment" :depends-on ("special-operators" "packages"))
    (:file "variables" :depends-on ("packages"))
    (:file "install" :depends-on ("loop" "simple-aliases" "environment-access-functions"
                                         "setf-expansions" "common-macros"
