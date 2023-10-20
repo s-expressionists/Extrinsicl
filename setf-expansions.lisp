@@ -104,7 +104,7 @@
                               ,@body)))))))
     (define-setf the (type place) env
       (multiple-value-bind (vars vals stores store-form access-form)
-          (^get-setf-expansion client env place)
+          (get-setf-expansion client env place)
         (values vars vals stores
                 `(multiple-value-bind (,@stores) (the ,type (values ,@stores))
                    ,store-form)
@@ -125,7 +125,7 @@
     ;; byte form into the DPB call and hope that the implementation speeds it up.
     (define-setf ldb (bytespec int) env
       (multiple-value-bind (temps vals stores store-form access-form)
-          (^get-setf-expansion client env int)
+          (get-setf-expansion client env int)
         (let ((store (gensym "STORE-LDB"))
               (stemp (first stores))
               (btemp (gensym "BTEMP")))
@@ -137,7 +137,7 @@
                   `(ldb ,btemp ,access-form)))))
     (define-setf mask-field (bytespec int) env
       (multiple-value-bind (temps vals stores store-form access-form)
-          (^get-setf-expansion client env int)
+          (get-setf-expansion client env int)
         (let ((store (gensym "STORE-MASK-FIELD"))
               (stemp (first stores))
               (btemp (gensym "BTEMP-MASK-FIELD")))
@@ -155,7 +155,7 @@
 	    (all-get-forms '()))
         (dolist (item (reverse values))
           (multiple-value-bind (vars vals stores storing-form get-form)
-	      (^get-setf-expansion client env item)
+	      (get-setf-expansion client env item)
 	    ;; If a place has more than one store variable, the other ones
 	    ;; are set to nil.
 	    (let ((extra (rest stores)))

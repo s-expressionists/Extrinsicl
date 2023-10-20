@@ -16,4 +16,9 @@
   (loop for name in *common-macros*
         for f = (common-macro-definitions:macro-function name)
         when f
-          do (setf (clostrum:macro-function client environment name) f)))
+          do (setf (clostrum:macro-function client environment name)
+                   (let ((f f))
+                     (declare (type (function (t t)) f))
+                     (lambda (form environment)
+                       (let ((common-macro-definitions:*client* client))
+                         (funcall f form environment)))))))

@@ -17,37 +17,6 @@
              for f in (list ,@(loop for fname in fnames collect `(function ,fname)))
              do (setf (clostrum:fdefinition ,csym ,esym n) f)))))
 
-(defun default-symbol-setf-expansion (symbol)
-  (let ((store (gensym "STORE"))) (values () () `(,store) `(setq ,symbol ,store) symbol)))
-
-(defun default-cons-setf-expansion (cons)
-  (let* ((head (car cons)) (args (cdr cons))
-         (temps (loop for arg in args
-                      when (symbolp arg)
-                        collect (gensym (symbol-name arg))
-                      else collect (gensym "TEMP")))
-         (store (gensym "STORE")))
-    (values temps args (list store)
-            `(funcall #'(setf ,head) ,store ,@temps) `(,head ,@temps))))
-
-(defun ^get-setf-expansion (client environment place)
-  (etypecase place
-    (symbol (multiple-value-bind (expansion expandedp)
-                (clostrum:macroexpand-1 client environment place)
-              (if expandedp
-                  (^get-setf-expansion client environment expansion)
-                  (default-symbol-setf-expansion place))))
-    (cons (let ((head (car place)))
-            (unless (symbolp head) (error "Invalid place: ~s" place)) ; FIXME better error
-            (let ((expander (clostrum:setf-expander client environment head)))
-              (if expander
-                  (funcall expander place environment)
-                  (multiple-value-bind (expansion expandedp)
-                      (clostrum:macroexpand-1 client environment place)
-                    (if expandedp
-                        (^get-setf-expansion client environment expansion)
-                        (default-cons-setf-expansion place)))))))))
-
 (defun ^constantp (client environment form)
   (let ((form (clostrum:macroexpand client environment form)))
     (typecase form
@@ -203,8 +172,8 @@
         (apply #'notevery (fdesignator predicate) sequences))
       (notany (predicate &rest sequences)
         (apply #'notany (fdesignator predicate) sequences))
-      (get-setf-expansion (place &optional env)
-        (^get-setf-expansion client (or env environment) place))
+      (cl:get-setf-expansion (place &optional env)
+        (get-setf-expansion client (or env environment) place))
       ;; 7 Objects
       ;; FIXME: Method combination?
       (ensure-generic-function (function-name

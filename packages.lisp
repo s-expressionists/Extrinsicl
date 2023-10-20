@@ -1,3 +1,5 @@
 (defpackage #:extrinsicl
   (:use #:cl)
-  (:export #:install-cl))
+  (:shadow #:get-setf-expansion)
+  (:export #:install-cl)
+  (:export #:get-setf-expansion))
