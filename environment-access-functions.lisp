@@ -145,6 +145,16 @@
       (constantp (form &optional env) (^constantp client (or env environment) form))
       ;; proclaim?
       ;; 4 Types and Classes
+      (coerce (object result-type)
+        (let ((type (^resolve-type result-type)))
+          (if (subtypep type 'function)
+              (if (typep object '(cons (eql lambda)))
+                  (funcall (^fdefinition 'eval) object)
+                  ;; assume function name
+                  ;; FIXME: This is slightly wrong - it should signal an error
+                  ;; if the name is a macro function or special operator.
+                  (^fdefinition object))
+              (coerce object type))))
       (subtypep (ts1 ts2 &optional env)
         (subtypep (^resolve-type ts1 env) (^resolve-type ts2 env)))
       (typep (object tspec &optional env)
