@@ -12,6 +12,15 @@ The `extrinsicl/maclina` subsystem can optionally be loaded. This provides `(ext
 
 If anything Extrinsicl installs doesn't work for your purposes, you can of course swap out function definitions etc. out of the resulting environment. Extrinsicl does not impose any kind of package locks.
 
+## Dependencies
+
+Besides [Trucler](https://github.com/s-expressionists/Trucler/), [Closer to MOP](https://github.com/pcostanza/closer-mop), and [Khazern (extrinsic)](https://github.com/s-expressionists/Khazern) which are all in Quicklisp, Extrinsicl has a few dependencies you'll have to clone yourself. These are:
+
+* [Clostrum](https://github.com/s-expressionists/Clostrum) for global environment access.
+* [Common Macro Definitions](https://github.com/robert-strandh/Common-macros/) for many macros.
+* [Invistra (extrinsic)](https://github.com/s-expressionists/Invistra/) for `format`. Invistra additionally depends on [Inravina](https://github.com/s-expressionists/Inravina), which itself depends on [Incless](https://github.com/s-expressionists/Incless) and [trivial-stream-column](https://github.com/yitzchak/trivial-stream-column).
+* The optional `extrinsicl/maclina` system depends on [Maclina](https://github.com/s-expressionists/maclina).
+
 # Ethos
 
 Wherever possible, the host Lisp and host objects are used. This system therefore does not reimplement CL as a whole, though a few parts do necessitate some reimplementation.
