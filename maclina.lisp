@@ -26,10 +26,8 @@
              (%compile definition)))
        (#2=#:eval (form)
          (maclina.compile:eval form environment client))
-       (#3=#:symbol-value (symbol)
+       (^symbol-value (symbol)
          (maclina.machine:symbol-value client environment symbol))
-       ((setf #3#) (value symbol)
-         (setf (maclina.machine:symbol-value client environment symbol) value))
        (#4=#:set (symbol value)
          (setf (maclina.machine:symbol-value client environment symbol) value))
        (#5=#:makunbound (symbol)
@@ -42,13 +40,15 @@
            input-file
            (values-list keys)
            :client client :environment environment
-           :verbose (#3# '*compile-verbose*) :print (#3# '*compile-print*)))
+           :verbose (^symbol-value '*compile-verbose*)
+           :print (^symbol-value '*compile-print*)))
        (#8=#:compile-file-pathname (input-file &rest keys &key &allow-other-keys)
          (multiple-value-call #'maclina.compile-file:compile-file-pathname
            input-file keys
            ;; unlikely this will matter, but better safe than sorry
            :client client :environment environment
-           :verbose (#3# '*compile-verbose*) :print (#3# '*compile-print*)))
+           :verbose (^symbol-value '*compile-verbose*)
+           :print (^symbol-value '*compile-print*)))
        (%disassemble (fn)
          (etypecase fn
            ((or maclina.machine:bytecode-function maclina.machine:bytecode-closure)
@@ -61,14 +61,13 @@
            (t ; function name
             (%disassemble (fdef fn)))))
        (#9=#:disassemble (fn)
-         (let ((*standard-output* (#3# '*standard-output*)))
+         (let ((*standard-output* (^symbol-value '*standard-output*)))
            (%disassemble fn))))
     (declare (inline fdef (setf fdef)))
     ;; FIXME: LOAD is tricky since it might get a source file, and also we need to
     ;; differentiate between source files and FASLs. Arguably that should all be
     ;; in Maclina?
     (setf (fdef 'compile) #'#1# (fdef 'eval) #'#2#
-          (fdef 'symbol-value) #'#3# (fdef '(setf symbol-value)) #'(setf #3#)
           (fdef 'set) #'#4# (fdef 'makunbound) #'#5# (fdef 'boundp) #'#6#
           (fdef 'compile-file) #'#7# (fdef 'compile-file-pathname) #'#8#
           (fdef 'disassemble) #'#9#))
@@ -92,10 +91,10 @@
   ;; which is good because that means this method doesn't need to close over
   ;; the global runtime environment for the case of env = nil.
   (assert env)
-  (let* ((hook (maclina.machine:symbol-value client env '*macroexpand-hook*))
+  (let* ((global (trucler:global-environment client env))
+         (hook (extrinsicl:symbol-value client global '*macroexpand-hook*))
          (fhook (etypecase hook
                   (function hook)
                   (symbol
-                   (clostrum:fdefinition client (trucler:global-environment client env)
-                                         hook)))))
+                   (clostrum:fdefinition client global hook)))))
     (extrinsicl:get-setf-expansion client env fhook place)))
