@@ -4,7 +4,7 @@
 
 (in-package #:extrinsicl.maclina)
 
-(defun install-eval (client environment compilation-environment)
+(defun install-eval (client environment)
   (labels
       ((fdef (name) (clostrum:fdefinition client environment name))
        ((setf fdef) (fun name)
@@ -12,7 +12,7 @@
        (%compile (definition)
          (etypecase definition
            ((cons (eql lambda))
-            (maclina.compile:compile definition compilation-environment client))
+            (maclina.compile:compile definition environment client))
            ((or compiled-function maclina.machine:bytecode-function
               maclina.machine:bytecode-closure)
             (values definition nil nil))
@@ -25,7 +25,7 @@
                (values name warningsp failurep))
              (%compile definition)))
        (#2=#:eval (form)
-         (maclina.compile:eval form compilation-environment client))
+         (maclina.compile:eval form environment client))
        (#3=#:symbol-value (symbol)
          (maclina.machine:symbol-value client environment symbol))
        ((setf #3#) (value symbol)
@@ -41,13 +41,13 @@
          (multiple-value-call #'maclina.compile-file:compile-file
            input-file
            (values-list keys)
-           :client client :environment compilation-environment
+           :client client :environment environment
            :verbose (#3# '*compile-verbose*) :print (#3# '*compile-print*)))
        (#8=#:compile-file-pathname (input-file &rest keys &key &allow-other-keys)
          (multiple-value-call #'maclina.compile-file:compile-file-pathname
            input-file keys
            ;; unlikely this will matter, but better safe than sorry
-           :client client :environment compilation-environment
+           :client client :environment environment
            :verbose (#3# '*compile-verbose*) :print (#3# '*compile-print*)))
        (%disassemble (fn)
          (etypecase fn

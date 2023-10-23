@@ -23,6 +23,7 @@
    (:file "condition-system-aliases" :depends-on ("defaliases" "packages"))
    (:file "make-load-form-saving-slots" :depends-on ("defaliases" "packages"))
    (:file "special-operators" :depends-on ("packages"))
+   #+(or)
    (:file "compilation-environment" :depends-on ("special-operators" "packages"))
    (:file "variables" :depends-on ("packages"))
    (:file "install" :depends-on ("loop" "simple-aliases" "environment-access-functions"
