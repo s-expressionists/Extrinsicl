@@ -102,72 +102,75 @@
                                     `((,eparam (or ,reparam environment)))))
                             (destructuring-bind (,@lambda-list) (rest ,place)
                               ,@body)))))))
-    (define-setf the (type place) env
-      (multiple-value-bind (vars vals stores store-form access-form)
-          (get-setf-expansion client env place)
-        (values vars vals stores
-                `(multiple-value-bind (,@stores) (the ,type (values ,@stores))
-                   ,store-form)
-                `(the ,type ,access-form))))
-    (define-setf apply (function &rest spreadable-args) nil
-      (if (typep function '(cons (eql function) (cons symbol null)))
-          (let ((temps (loop repeat (length spreadable-args) collect (gensym "TEMP")))
-                (store (gensym "STORE")))
-            (values temps spreadable-args (list store)
-                    `(apply #'(setf ,(second function)) ,store ,@temps)
-                    `(apply ,function ,@temps)))
-          ;; FIXME: Better error
-          (error "Don't know how to expand SETF: ~s"
-                 `(apply ,function ,@spreadable-args))))
-    ;; The byte things could be optimized by looking for the common case of
-    ;; (ldb (byte ...) ...) and so on. We don't have a portable %LDB that
-    ;; deals with the size and position directly, but we could transpose the
-    ;; byte form into the DPB call and hope that the implementation speeds it up.
-    (define-setf ldb (bytespec int) env
-      (multiple-value-bind (temps vals stores store-form access-form)
-          (get-setf-expansion client env int)
-        (let ((store (gensym "STORE-LDB"))
-              (stemp (first stores))
-              (btemp (gensym "BTEMP")))
-          (values `(,btemp ,@temps)
-                  `(,bytespec ,@vals)
-                  `(,store)
-                  `(let ((,stemp (dpb ,store ,btemp ,access-form)))
-                     ,store-form ,store)
-                  `(ldb ,btemp ,access-form)))))
-    (define-setf mask-field (bytespec int) env
-      (multiple-value-bind (temps vals stores store-form access-form)
-          (get-setf-expansion client env int)
-        (let ((store (gensym "STORE-MASK-FIELD"))
-              (stemp (first stores))
-              (btemp (gensym "BTEMP-MASK-FIELD")))
-          (values `(,btemp ,@temps)
-                  `(,bytespec ,@vals)
-                  `(,store)
-                  `(let ((,stemp (deposit-field ,store ,btemp ,access-form)))
-                     ,store-form ,store)
-                  `(mask-field ,btemp ,access-form)))))
-    (define-setf values (&rest values) env
-      (let ((all-vars '())
-	    (all-vals '())
-	    (all-stores '())
-	    (all-storing-forms '())
-	    (all-get-forms '()))
-        (dolist (item (reverse values))
-          (multiple-value-bind (vars vals stores storing-form get-form)
-	      (get-setf-expansion client env item)
-	    ;; If a place has more than one store variable, the other ones
-	    ;; are set to nil.
-	    (let ((extra (rest stores)))
-	      (unless (endp extra)
-	        (setq vars (append extra vars)
-		      vals (append (make-list (length extra)) vals)
-		      stores (list (first stores)))))
-	    (setq all-vars (append vars all-vars)
-	          all-vals (append vals all-vals)
-	          all-stores (append stores all-stores)
-	          all-storing-forms (cons storing-form all-storing-forms)
-	          all-get-forms (cons get-form all-get-forms))))
-        (values all-vars all-vals all-stores `(values ,@all-storing-forms)
-	        `(values ,@all-get-forms)))))
+    (flet ((get-setf-expansion (place env)
+             (let ((hook (symbol-value client environment '*macroexpand-hook*)))
+               (get-setf-expansion client environment hook place))))
+      (define-setf the (type place) env
+        (multiple-value-bind (vars vals stores store-form access-form)
+            (get-setf-expansion place env)
+          (values vars vals stores
+                  `(multiple-value-bind (,@stores) (the ,type (values ,@stores))
+                     ,store-form)
+                  `(the ,type ,access-form))))
+      (define-setf apply (function &rest spreadable-args) nil
+        (if (typep function '(cons (eql function) (cons symbol null)))
+            (let ((temps (loop repeat (length spreadable-args) collect (gensym "TEMP")))
+                  (store (gensym "STORE")))
+              (values temps spreadable-args (list store)
+                      `(apply #'(setf ,(second function)) ,store ,@temps)
+                      `(apply ,function ,@temps)))
+            ;; FIXME: Better error
+            (error "Don't know how to expand SETF: ~s"
+                   `(apply ,function ,@spreadable-args))))
+      ;; The byte things could be optimized by looking for the common case of
+      ;; (ldb (byte ...) ...) and so on. We don't have a portable %LDB that
+      ;; deals with the size and position directly, but we could transpose the
+      ;; byte form into the DPB call and hope that the implementation speeds it up.
+      (define-setf ldb (bytespec int) env
+        (multiple-value-bind (temps vals stores store-form access-form)
+            (get-setf-expansion int env)
+          (let ((store (gensym "STORE-LDB"))
+                (stemp (first stores))
+                (btemp (gensym "BTEMP")))
+            (values `(,btemp ,@temps)
+                    `(,bytespec ,@vals)
+                    `(,store)
+                    `(let ((,stemp (dpb ,store ,btemp ,access-form)))
+                       ,store-form ,store)
+                    `(ldb ,btemp ,access-form)))))
+      (define-setf mask-field (bytespec int) env
+        (multiple-value-bind (temps vals stores store-form access-form)
+            (get-setf-expansion int env)
+          (let ((store (gensym "STORE-MASK-FIELD"))
+                (stemp (first stores))
+                (btemp (gensym "BTEMP-MASK-FIELD")))
+            (values `(,btemp ,@temps)
+                    `(,bytespec ,@vals)
+                    `(,store)
+                    `(let ((,stemp (deposit-field ,store ,btemp ,access-form)))
+                       ,store-form ,store)
+                    `(mask-field ,btemp ,access-form)))))
+      (define-setf values (&rest values) env
+        (let ((all-vars '())
+	      (all-vals '())
+	      (all-stores '())
+	      (all-storing-forms '())
+	      (all-get-forms '()))
+          (dolist (item (reverse values))
+            (multiple-value-bind (vars vals stores storing-form get-form)
+	        (get-setf-expansion item env)
+	      ;; If a place has more than one store variable, the other ones
+	      ;; are set to nil.
+	      (let ((extra (rest stores)))
+	        (unless (endp extra)
+	          (setq vars (append extra vars)
+		        vals (append (make-list (length extra)) vals)
+		        stores (list (first stores)))))
+	      (setq all-vars (append vars all-vars)
+	            all-vals (append vals all-vals)
+	            all-stores (append stores all-stores)
+	            all-storing-forms (cons storing-form all-storing-forms)
+	            all-get-forms (cons get-form all-get-forms))))
+          (values all-vars all-vals all-stores `(values ,@all-storing-forms)
+	          `(values ,@all-get-forms))))))
   (values))

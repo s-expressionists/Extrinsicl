@@ -35,4 +35,4 @@
   (loop for (name value) in *valued-variables*
         do (clostrum:make-parameter client environment name value))
   (loop for name in *alias-variables*
-        do (clostrum:make-parameter client environment name (symbol-value name))))
+        do (clostrum:make-parameter client environment name (cl:symbol-value name))))

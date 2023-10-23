@@ -151,7 +151,7 @@
 
 (defun install-simple-constant-aliases (client environment)
   (loop for name in *simple-constant-aliases*
-        for v = (symbol-value name)
+        for v = (cl:symbol-value name)
         do (clostrum:make-constant client environment name v)))
 
 (defparameter *simple-class-aliases*

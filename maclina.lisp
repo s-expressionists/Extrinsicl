@@ -57,7 +57,7 @@
             (format t "; Don't know how to disassemble non-bytecode function"))
            ((cons (eql lambda))
             (maclina.machine:disassemble
-             (maclina.compile:compile fn compilation-environment client)))
+             (maclina.compile:compile fn environment client)))
            (t ; function name
             (%disassemble (fdef fn)))))
        (#9=#:disassemble (fn)
@@ -80,3 +80,22 @@
     (defconst 'lambda-parameters-limit (maclina.machine:lambda-parameters-limit client))
     (defconst 'multiple-values-limit (maclina.machine:multiple-values-limit client)))
   (values))
+
+(defmethod extrinsicl:symbol-value ((client maclina.vm-cross:client) env symbol)
+  (maclina.machine:symbol-value client env symbol))
+(defmethod (setf extrinsicl:symbol-value) (new (client maclina.vm-cross:client) env symbol)
+  (setf (maclina.machine:symbol-value client env symbol) new))
+
+(defmethod common-macro-definitions:get-setf-expansion
+    ((client maclina.vm-cross:client) place &optional env)
+  ;; This method is only ever called by common macros on an actual environment,
+  ;; which is good because that means this method doesn't need to close over
+  ;; the global runtime environment for the case of env = nil.
+  (assert env)
+  (let* ((hook (maclina.machine:symbol-value client env '*macroexpand-hook*))
+         (fhook (etypecase hook
+                  (function hook)
+                  (symbol
+                   (clostrum:fdefinition client (trucler:global-environment client env)
+                                         hook)))))
+    (extrinsicl:get-setf-expansion client env fhook place)))

@@ -11,11 +11,12 @@
   :components
   ((:file "packages")
    (:file "type" :depends-on ("packages"))
-   (:file "setf" :depends-on ("packages"))
+   (:file "access" :depends-on ("packages"))
    (:file "defaliases" :depends-on ("packages"))
-   (:file "environment-access-functions" :depends-on ("defaliases" "setf" "type" "packages"))
+   (:file "environment-access-functions"
+    :depends-on ("defaliases" "access" "type" "packages"))
    (:file "proclaim" :depends-on ("type" "packages"))
-   (:file "setf-expansions" :depends-on ("setf" "defaliases" "packages"))
+   (:file "setf-expansions" :depends-on ("access" "defaliases" "packages"))
    (:file "common-macros" :depends-on ("packages"))
    (:file "loop" :depends-on ("packages"))
    (:file "format" :depends-on ("defaliases" "packages"))

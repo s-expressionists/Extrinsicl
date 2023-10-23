@@ -1,24 +1,18 @@
 (in-package #:extrinsicl)
 
 (defun ^constantp (client environment form)
-  (let ((form (clostrum:macroexpand client environment form)))
-    (typecase form
-      (symbol (typep (trucler:describe-variable client environment form)
-                     'trucler:constant-variable-description))
-      ((cons (eql quote) (cons t null)) t) ; note: assumes QUOTE has normal meaning
-      (cons nil)
-      (t t))))
+  (typecase form
+    (symbol (typep (trucler:describe-variable client environment form)
+                   'trucler:constant-variable-description))
+    ((cons (eql quote) (cons t null)) t) ; note: assumes QUOTE has normal meaning
+    (cons nil)
+    (t t)))
 
 (defun install-environment-accessors (client environment)
   (labels
-      ((describe-variable (name &optional env)
-         (trucler:describe-variable client (or env environment) name))
-       (symbol-macro-function (name &optional env)
-         (let ((info (describe-variable name env)))
-           (if (typep info 'trucler:symbol-macro-description)
-               (let ((expansion (trucler:expansion info)))
-                 (lambda (form env) (declare (ignore form env)) expansion))
-               nil)))
+      ((^symbol-value (symbol) (symbol-value client environment symbol))
+       ((setf ^symbol-value) (value symbol)
+         (setf (symbol-value client environment symbol) value))
        (^symbol-plist (symbol)
          (clostrum:symbol-plist client environment symbol))
        ((setf ^symbol-plist) (new symbol)
@@ -36,15 +30,6 @@
                (trucler:expander info)
                nil)))
        (macroexpand-hook () (fdesignator (^symbol-value '*macroexpand-hook*)))
-       (^macroexpand-1 (form &optional env)
-         (let ((expander
-                 (typecase form
-                   (symbol (symbol-macro-function form env))
-                   (cons (and (symbolp (car form)) (^macro-function (car form) env)))
-                   (t nil))))
-           (if expander
-               (values (funcall (macroexpand-hook) expander form env) t)
-               (values form nil))))
        (^find-class (name &optional (errorp t) env)
          (clostrum:find-class client (or env environment) name errorp))
        (class-designator (desig)
@@ -86,15 +71,6 @@
                                      *print-miser-width* *print-pprint-dispatch*
                                      *print-pretty* *print-readably* *print-right-margin*)
              (funcall thunk))))
-       ;; since symbol-value's implementation is part of the evaluator runtime,
-       ;; we can't define it in this system. But we do sometimes need to grab symbol values,
-       ;; for other functions, so we assume that SYMBOL-VALUE will be defined later.
-       ;; This is NOT the function symbol-value in the environment, since that would be
-       ;; recursive.
-       (^symbol-value (symbol)
-         (funcall (clostrum:fdefinition client environment 'symbol-value) symbol))
-       ((setf ^symbol-value) (value symbol)
-         (funcall (clostrum:fdefinition client environment 'set) symbol value))
        (current-package () (^symbol-value '*package*))
        (creadtable () (^symbol-value '*readtable*))
        (default-pathname-defaults () (^symbol-value '*default-pathname-defaults*))
@@ -132,13 +108,10 @@
       ((setf macro-function) (function name &optional env)
         (check-type env null)
         (setf (clostrum:macro-function client environment name) function))
-      (macroexpand-1 (form &optional env) (^macroexpand-1 form env))
-      (macroexpand (form &optional env)
-        (loop with ever-expanded-p = nil
-              do (multiple-value-bind (expansion expandedp) (^macroexpand-1 form env)
-                   (if expandedp
-                       (setf form expansion ever-expanded-p t)
-                       (return (values form ever-expanded-p))))))
+      (cl:macroexpand-1 (form &optional env)
+        (macroexpand-1 client (or env environment) (macroexpand-hook) form))
+      (cl:macroexpand (form &optional env)
+        (macroexpand client (or env environment) (macroexpand-hook) form))
       (special-operator-p (name)
         (check-type name symbol)
         (typep (describe-function name) 'trucler:special-operator-description))
@@ -178,7 +151,7 @@
       (notany (predicate &rest sequences)
         (apply #'notany (fdesignator predicate) sequences))
       (cl:get-setf-expansion (place &optional env)
-        (get-setf-expansion client (or env environment) place))
+        (get-setf-expansion client (or env environment) (macroexpand-hook) place))
       ;; 7 Objects
       ;; FIXME: Method combination?
       (ensure-generic-function (function-name
@@ -222,8 +195,6 @@
             (concatenate 'string "G" (write-to-string x :base 10))))))
       (gentemp (&optional prefix (package (current-package)))
         (gentemp prefix (package-designator package)))
-      ;; TODO: symbol-value etc are part of the runtime so we can't define them here,
-      ;; but maybe we could do symbol-plist?
       (symbol-function (symbol)
         (check-type symbol symbol)
         (^fdefinition symbol))
@@ -232,6 +203,8 @@
         (setf (clostrum:fdefinition client environment symbol) function))
       (symbol-plist (symbol) (^symbol-plist symbol))
       ((setf symbol-plist) (plist symbol) (setf (^symbol-plist symbol) plist))
+      (cl:symbol-value (symbol) (^symbol-value symbol))
+      ((setf cl:symbol-value) (value symbol) (setf (^symbol-value symbol) value))
       (get (symbol indicator &optional default)
         (getf (^symbol-plist symbol) indicator default))
       ((setf get) (new symbol indicator &optional default)
