@@ -18,7 +18,7 @@ Besides [Trucler](https://github.com/s-expressionists/Trucler/), [Closer to MOP]
 
 * [Clostrum](https://github.com/s-expressionists/Clostrum) for global environment access.
 * [Common Macro Definitions](https://github.com/robert-strandh/Common-macros/) for many macros.
-* [Invistra (extrinsic)](https://github.com/s-expressionists/Invistra/) for `format`. Invistra additionally depends on [Inravina](https://github.com/s-expressionists/Inravina), which itself depends on [Incless](https://github.com/s-expressionists/Incless) and [trivial-stream-column](https://github.com/yitzchak/trivial-stream-column).
+* [Invistra (extrinsic)](https://github.com/s-expressionists/Invistra/) for `format`. Invistra additionally depends on [Inravina](https://github.com/s-expressionists/Inravina), which itself depends on [Incless](https://github.com/s-expressionists/Incless) and [nontrivial-gray-streams](https://github.com/yitzchak/nontrivial-gray-streams).
 * The optional `extrinsicl/maclina` system depends on [Maclina](https://github.com/s-expressionists/maclina).
 
 # Ethos
