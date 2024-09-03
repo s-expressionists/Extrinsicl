@@ -41,16 +41,18 @@
        (retest1 (function key more-keys &rest fixed)
          (declare (dynamic-extent fixed))
          (multiple-value-call function
-           (values-list fixed) :key (fdesignator key) more-keys))
+           (values-list fixed) :key (fdesignator key) (values-list more-keys)))
        (retest2 (function key test testp test-not test-not-p more-keys &rest fixed)
          (declare (dynamic-extent fixed))
          (cond ((and testp test-not-p) (error "~s and ~s both supplied" :test :test-not))
                (test-not-p
                 (multiple-value-call function (values-list fixed)
-                  :key (fdesignator key) :test-not (fdesignator test-not) more-keys))
+                  :key (fdesignator key) :test-not (fdesignator test-not)
+                  (values-list more-keys)))
                (t
                 (multiple-value-call function (values-list fixed)
-                  :key (fdesignator key) :test (fdesignator test) more-keys))))
+                  :key (fdesignator key) :test (fdesignator test)
+                  (values-list more-keys)))))
        (rebind-read (thunk)
          "Call THUNK with the host reader variables rebound to the environment's."
          (let ((*read-base* (^symbol-value '*read-base*))
