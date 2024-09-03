@@ -3,6 +3,11 @@
 (defgeneric symbol-value (client environment symbol))
 (defgeneric (setf symbol-value) (value client environment symbol))
 
+(defun fdesignator (client environment designator)
+  (etypecase designator
+    (function designator)
+    (symbol (clostrum:fdefinition client environment designator))))
+
 (defgeneric macroexpand-1 (client environment hook form))
 
 (defmethod macroexpand-1 (client env (hook function) (form symbol))

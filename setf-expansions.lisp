@@ -103,8 +103,9 @@
                             (destructuring-bind (,@lambda-list) (rest ,place)
                               ,@body)))))))
     (flet ((get-setf-expansion (place env)
-             (let ((hook (symbol-value client environment '*macroexpand-hook*)))
-               (get-setf-expansion client environment hook place))))
+             (let* ((hook (symbol-value client environment '*macroexpand-hook*))
+                    (hookf (fdesignator client environment hook)))
+               (get-setf-expansion client env hookf place))))
       (define-setf the (type place) env
         (multiple-value-bind (vars vals stores store-form access-form)
             (get-setf-expansion place env)

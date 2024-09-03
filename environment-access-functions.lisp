@@ -21,6 +21,7 @@
          (trucler:describe-function client (or env environment) name))
        (^fdefinition (name) (clostrum:fdefinition client environment name))
        (fdesignator (desig)
+         ;; FIXME: duplicate of top level fdesignator. dumb!
          (etypecase desig
            (function desig)
            (symbol (^fdefinition desig))))
