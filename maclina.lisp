@@ -84,17 +84,3 @@
   (maclina.machine:symbol-value client env symbol))
 (defmethod (setf extrinsicl:symbol-value) (new (client maclina.vm-cross:client) env symbol)
   (setf (maclina.machine:symbol-value client env symbol) new))
-
-(defmethod common-macro-definitions:get-setf-expansion
-    ((client maclina.vm-cross:client) place &optional env)
-  ;; This method is only ever called by common macros on an actual environment,
-  ;; which is good because that means this method doesn't need to close over
-  ;; the global runtime environment for the case of env = nil.
-  (assert env)
-  (let* ((global (trucler:global-environment client env))
-         (hook (extrinsicl:symbol-value client global '*macroexpand-hook*))
-         (fhook (etypecase hook
-                  (function hook)
-                  (symbol
-                   (clostrum:fdefinition client global hook)))))
-    (extrinsicl:get-setf-expansion client env fhook place)))
