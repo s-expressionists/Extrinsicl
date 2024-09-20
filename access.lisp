@@ -15,7 +15,7 @@
     (if (typep info 'trucler:symbol-macro-description)
         (let ((expansion (trucler:expansion info)))
           (values
-           (funcall hook (lambda (form env) (declare (ignore form env)) expansion) env)
+           (funcall hook (lambda (form env) (declare (ignore form env)) expansion) form env)
            t))
         (values form nil))))
 
