@@ -24,7 +24,7 @@
     ;; defined in environment-access-functions.lisp.
     ;; 14 Conses
     ((setf car) (new cons) (setf (car cons) new))
-    ((setf cdr) (new cons) (setf (car cons) new))
+    ((setf cdr) (new cons) (setf (cdr cons) new))
     ((setf caar) (new cons) (setf (caar cons) new))
     ((setf cadr) (new cons) (setf (cadr cons) new))
     ((setf cdar) (new cons) (setf (cdar cons) new))
