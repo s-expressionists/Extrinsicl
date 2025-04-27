@@ -16,7 +16,7 @@
 ;;; They are defined by install-setf-expanders below.
 
 ;;; Also note that we do not define (setf symbol-value) for the same reason we don't
-;;; install symbol-value.
+;;; install symbol-value. But we can define a setf expander using SET.
 
 (defun install-setf-functions (client environment)
   (defaliases client environment
@@ -106,6 +106,11 @@
              (let* ((hook (symbol-value client environment '*macroexpand-hook*))
                     (hookf (fdesignator client environment hook)))
                (get-setf-expansion client env hookf place))))
+      (define-setf cl:symbol-value (symbol) nil
+        (let ((s (gensym "SYMBOL")) (store (gensym "STORE")))
+          (values `(,s) (list symbol) `(,store)
+                  `(set ,s ,store)
+                  `(symbol-value ,s))))
       (define-setf the (type place) env
         (multiple-value-bind (vars vals stores store-form access-form)
             (get-setf-expansion place env)
