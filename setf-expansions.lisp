@@ -83,7 +83,7 @@
       (define-cons-setf caar car `(car ,cons))
       (define-cons-setf cadr car `(cdr ,cons))
       (define-cons-setf cdar cdr `(car ,cons))
-      (define-cons-setf cdar cdr `(cdr ,cons))
+      (define-cons-setf cddr cdr `(cdr ,cons))
       (define-cons-setf caaar car `(caar ,cons))
       (define-cons-setf caadr car `(cadr ,cons))
       (define-cons-setf cadar car `(cdar ,cons))
