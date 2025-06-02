@@ -44,11 +44,11 @@
       (etypecase tspec
         (class tspec)
         (symbol
-         (or (clostrum:find-class client environment tspec nil)
-           (if (member tspec *atomic-type-specifiers*)
-               ;; nothing much else we can do, and we shouldn't need to
-               ;; alias any of the standard atomic type specifiers.
-               tspec
+         (if (member tspec *atomic-type-specifiers*)
+             ;; nothing much else we can do, and we shouldn't need to
+             ;; alias any of the standard atomic type specifiers.
+             tspec
+             (or (clostrum:find-class client environment tspec nil)           
                (error "Unknown type specifier: ~s" tspec))))
         (cons
          (case (car tspec)
