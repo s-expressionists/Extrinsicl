@@ -33,10 +33,6 @@
        (macroexpand-hook () (fdesignator (^symbol-value '*macroexpand-hook*)))
        (^find-class (name &optional (errorp t) env)
          (clostrum:find-class client (or env environment) name errorp))
-       (class-designator (desig)
-         (etypecase desig
-           (class desig)
-           (symbol (^find-class desig))))
        (^resolve-type (type-specifier &optional env)
          (resolve-type client (or env environment) type-specifier))
        (retest1 (function key more-keys &rest fixed)
@@ -156,16 +152,6 @@
       (cl:get-setf-expansion (place &optional env)
         (get-setf-expansion client (or env environment) (macroexpand-hook) place))
       ;; 7 Objects
-      ;; FIXME: Method combination?
-      (ensure-generic-function (function-name
-                                 &rest keys
-                                 &key (generic-function-class 'standard-generic-function)
-                                 (method-class 'standard-method)
-                                 &allow-other-keys)
-        (apply #'ensure-generic-function function-name
-               :generic-function-class (class-designator generic-function-class)
-               :method-class (class-designator method-class)
-               keys))
       (find-class (name &optional (errorp t) env) (^find-class name errorp env))
       ((setf find-class) (class name &optional errorp env)
         (declare (ignore errorp env)) ; FIXME: Not sure about ignoring env.
@@ -667,7 +653,10 @@
   (let ((change-class (make-symbol "CHANGE-CLASS"))
         (make-instance (make-symbol "MAKE-INSTANCE"))
         (make-instances-obsolete (make-symbol "MAKE-INSTANCES-OBSOLETE"))
-        (make-load-form (make-symbol "MAKE-LOAD-FORM")))
+        (make-load-form (make-symbol "MAKE-LOAD-FORM"))
+        (ensure-generic-function-using-class
+          (make-symbol "ENSURE-GENERIC-FUNCTION-USING-CLASS"))
+        (ensure-class-using-class (make-symbol "ENSURE-CLASS-USING-CLASS")))
     (eval `(defgeneric ,change-class (instance new-class &key &allow-other-keys)
              (:method ((instance standard-object) (new-class standard-class) &rest initargs)
                ;; use the host change-class.
@@ -703,9 +692,137 @@
                  (if name
                      (values `(find-class ',name) nil)
                      (error "~s lacks a proper name" object))))))
+    (eval `(defgeneric ,ensure-generic-function-using-class
+               (generic-function-or-nil function-name
+                &key argument-precedence-order declarations documentation
+                  generic-function-class lambda-list method-class method-combination
+                  name &allow-other-keys)
+             ;; FIXME: Method combination defaulting?
+             (:method ((gf generic-function) fname &rest keys
+                       &key (method-class 'standard-method)
+                         (generic-function-class (class-of gf))
+                       &allow-other-keys)
+               (setf keys (copy-list keys))
+               (remf keys :generic-function-class)
+               (remf keys :method-class)
+               (etypecase generic-function-class
+                 (symbol (setf generic-function-class
+                               (clostrum:find-class ',client ',environment
+                                                    generic-function-class)))
+                 (class))
+               (unless (eq generic-function-class (class-of gf))
+                 (error "Cannot change the class of generic function ~a from ~a to ~a."
+                        fname (class-name (class-of gf))
+                        (class-name generic-function-class)))
+               (etypecase method-class
+                 (symbol (setf method-class
+                               (clostrum:find-class ',client ',environment
+                                                    method-class)))
+                 (class)) ;; initialization checks that it's a subtype of METHOD
+               (apply #'reinitialize-instance gf
+                      :name fname :method-class method-class keys))
+             (:method ((gf null) fname &rest keys
+                       &key (method-class 'standard-method)
+                         (generic-function-class 'standard-generic-function)
+                       &allow-other-keys)
+               (setf keys (copy-list keys))
+               (remf keys :generic-function-class)
+               (remf keys :method-class)
+               (etypecase method-class
+                 (symbol (setf method-class
+                               (clostrum:find-class ',client ',environment
+                                                    method-class)))
+                 (class))
+               (etypecase generic-function-class
+                 (symbol (setf generic-function-class
+                               (clostrum:find-class ',client ',environment
+                                                    generic-function-class)))
+                 (class))
+               ;; host SUBTYPEP ok since we're giving it explicit classes.
+               ;; host generic-function class is also ok as we're assuming this
+               ;; environment uses host classes.
+               (unless (subtypep generic-function-class
+                                 #.(find-class 'generic-function))
+                 (error "~s is not a subclass of ~s"
+                        (class-name generic-function-class) 'generic-function))
+               (setf (clostrum:fdefinition ',client ',environment fname)
+                     ;; host make-instance ok, we are passing a class
+                     (apply #'make-instance generic-function-class
+                            :method-class method-class :name fname keys)))))
+    (eval `(flet ((resolve-classes (classes)
+                    (loop for c in classes
+                          collect (etypecase c
+                                    (symbol
+                                     (or (clostrum:find-class ',client ',environment
+                                                              c nil)
+                                       ;; call ECUC directly so that the class
+                                       ;; is installed in the right environment.
+                                       ;; indirection is to avoid a stupid
+                                       ;; function undefinedness warning.
+                                       (funcall (fdefinition ',ensure-class-using-class)
+                                                nil c :metaclass 'mop:forward-referenced-class)))
+                                    (class c))))
+                  (resolve-metaclass (class)
+                    (etypecase class
+                      (symbol (clostrum:find-class ',client ',environment class))
+                      (class class))))
+             (defgeneric ,ensure-class-using-class
+                 (class cname &key direct-default-initargs direct-slots
+                                direct-superclasses name metaclass
+                  &allow-other-keys)
+               (:method ((class class) name &rest keys
+                         &key direct-superclasses (metaclass (class-of class))
+                         &allow-other-keys)
+                 (setf keys (copy-list keys))
+                 (remf keys :metaclass)
+                 (remf keys :direct-superclasses)
+                 (setf direct-superclasses (resolve-classes direct-superclasses))
+                 (setf metaclass (resolve-metaclass metaclass))
+                 (unless (eq metaclass (class-of class))
+                   (error "Cannot change metaclass of ~s" class))
+                 (apply #'reinitialize-instance class
+                        :direct-superclasses direct-superclasses :name name keys))
+               (:method ((class mop:forward-referenced-class) name &rest keys
+                         &key direct-superclasses metaclass &allow-other-keys)
+                 (setf keys (copy-list keys))
+                 (remf keys :metaclass)
+                 (remf keys :direct-superclasses)
+                 (setf direct-superclasses (resolve-classes direct-superclasses))
+                 (setf metaclass (resolve-metaclass metaclass))
+                 (apply #'change-class class metaclass
+                        :direct-superclasses direct-superclasses :name name keys))
+               (:method ((class null) name &rest keys
+                         &key direct-superclasses metaclass &allow-other-keys)
+                 (setf keys (copy-list keys))
+                 (remf keys :metaclass)
+                 (remf keys :direct-superclasses)
+                 (setf direct-superclasses (resolve-classes direct-superclasses))
+                 (setf metaclass (resolve-metaclass metaclass))
+                 (setf (clostrum:find-class ',client ',environment name)
+                       (apply #'make-instance metaclass
+                              :direct-superclasses direct-superclasses
+                              :name name keys))))))
     (setf (clostrum:fdefinition client environment 'make-instance) (fdefinition make-instance)
           (clostrum:fdefinition client environment 'change-class) (fdefinition change-class)
           (clostrum:fdefinition client environment 'make-instances-obsolete)
           (fdefinition make-instances-obsolete)
-          (clostrum:fdefinition client environment 'make-load-form) (fdefinition make-load-form)))
+          (clostrum:fdefinition client environment 'make-load-form) (fdefinition make-load-form)
+          (clostrum:fdefinition client environment 'mop:ensure-generic-function-using-class)
+          (fdefinition ensure-generic-function-using-class)
+          (clostrum:fdefinition client environment 'mop:ensure-class-using-class)
+          (fdefinition ensure-class-using-class))
+    ;; These are ordinary functions, but they rely on the generics.
+    (let ((egfuc (fdefinition ensure-generic-function-using-class))
+          (ecuc (fdefinition ensure-class-using-class)))
+      (defaliases client environment
+        (ensure-generic-function (function-name &rest keys)
+          (if (clostrum:fboundp client environment function-name)
+              (let ((gf (clostrum:fdefinition client environment function-name)))
+                (unless (typep gf #.(find-class 'generic-function))
+                  (error "~s already names a non-generic function" function-name))
+                (apply egfuc gf function-name keys))
+              (apply egfuc nil function-name keys)))
+        (mop:ensure-class (class-name &rest keys)
+          (apply ecuc (clostrum:find-class client environment class-name nil)
+                 class-name keys)))))
   nil)

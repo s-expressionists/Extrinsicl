@@ -5,7 +5,7 @@
   :license "BSD"
   :depends-on (#:clostrum #:trucler
                           #:common-macro-definitions ; various
-                          #:closer-mop ; make-load-form-saving-slots
+                          #:closer-mop
                           #:invistra-extrinsic ; format
                           #:khazern-extrinsic) ; loop
   :components

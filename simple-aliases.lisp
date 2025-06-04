@@ -109,7 +109,41 @@
     sleep describe-object get-internal-real-time get-internal-run-time room
     dribble lisp-implementation-type lisp-implementation-version
     short-site-name long-site-name machine-instance machine-type machine-version
-    software-type software-version user-homedir-pathname))
+    software-type software-version user-homedir-pathname
+    ;; MOP
+    mop:accessor-method-slot-definition mop:add-dependent
+    mop:add-direct-method mop:add-direct-subclass
+    mop:class-default-initargs mop:class-direct-default-initargs
+    mop:class-direct-slots mop:class-direct-subclasses mop:class-direct-superclasses
+    mop:class-finalized-p mop:class-precedence-list mop:class-prototype
+    mop:class-slots mop:compute-applicable-methods-using-classes
+    mop:compute-class-precedence-list mop:compute-default-initargs
+    mop:compute-discriminating-function mop:compute-effective-method
+    mop:compute-effective-slot-definition mop:compute-slots
+    mop:direct-slot-definition-class mop:effective-slot-definition-class
+    mop:eql-specializer-object mop:extract-lambda-list
+    mop:extract-specializer-names mop:finalize-inheritance
+    mop:funcallable-standard-instance-access
+    (setf mop:funcallable-standard-instance-access)
+    mop:generic-function-argument-precedence-order mop:generic-function-declarations
+    mop:generic-function-lambda-list mop:generic-function-method-class
+    mop:generic-function-method-combination mop:generic-function-methods
+    mop:generic-function-name (setf mop:generic-function-name)
+    mop:intern-eql-specializer
+    mop:make-method-lambda ;; really unsure about this one - uses environment!
+    mop:map-dependents mop:method-function mop:method-generic-function
+    mop:method-lambda-list mop:method-specializers mop:slot-definition-allocation
+    mop:slot-definition-initargs mop:slot-definition-initform
+    mop:slot-definition-initfunction mop:slot-definition-name
+    mop:slot-definition-type mop:slot-definition-readers mop:slot-definition-writers
+    mop:slot-definition-location mop:reader-method-class
+    mop:remove-dependent mop:remove-direct-method mop:remove-direct-subclass
+    mop:set-funcallable-instance-function mop:slot-boundp-using-class
+    mop:slot-makunbound-using-class mop:slot-value-using-class
+    (setf mop:slot-value-using-class) mop:specializer-direct-generic-functions
+    mop:specializer-direct-methods mop:standard-instance-access
+    (setf mop:standard-instance-access) mop:update-dependent mop:validate-superclass
+    mop:writer-method-class))
 
 (defun install-simple-function-aliases (client environment)
   (loop for name in *simple-function-aliases*
@@ -202,6 +236,13 @@
     ;; 23 Reader
     readtable reader-error
     ;; 24 System Construction, Environment
+    ;; MOP
+    mop:funcallable-standard-object mop:metaobject mop:standard-accessor-method
+    mop:standard-reader-method mop:standard-writer-method mop:slot-definition
+    mop:direct-slot-definition mop:effective-slot-definition
+    mop:standard-slot-definition mop:standard-direct-slot-definition
+    mop:standard-effective-slot-definition mop:specializer mop:eql-specializer
+    mop:funcallable-standard-class mop:forward-referenced-class
     ))
 
 (defun install-simple-class-aliases (client environment)
