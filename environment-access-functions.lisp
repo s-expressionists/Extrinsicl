@@ -386,8 +386,10 @@
       ;; 15 Arrays
       (make-array (dimensions &rest keys &key (element-type t) &allow-other-keys)
         (apply #'make-array dimensions :element-type (^resolve-type element-type) keys))
-      (adjust-array (array dimensions &rest keys &key (element-type t) &allow-other-keys)
-        (apply #'adjust-array array dimensions :element-type (^resolve-type element-type) keys))
+      (adjust-array (array dimensions &rest keys &key (element-type t etp) &allow-other-keys)
+        (if etp
+            (apply #'adjust-array array dimensions :element-type (^resolve-type element-type) keys)
+            (apply #'adjust-array array dimensions keys)))
       (upgraded-array-element-type (typespec &optional env)
         (upgraded-array-element-type (^resolve-type typespec env)))
       ;; 16 Strings
