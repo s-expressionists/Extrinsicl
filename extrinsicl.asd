@@ -6,7 +6,7 @@
   :depends-on (#:clostrum #:trucler
                           #:common-macro-definitions ; various
                           #:closer-mop
-                          #:invistra-extrinsic ; format
+                          #:invistra-extrinsic #:quaviver/schubfach ; format
                           #:khazern-extrinsic) ; loop
   :components
   ((:file "packages")
