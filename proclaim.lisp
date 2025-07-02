@@ -27,7 +27,7 @@ The default method returns the type specifier after macroexpansion in the enviro
              (setf (clostrum:operator-ftype client environment name) type))))
        (#1=#:proclaim (declaration-specifier)
          ;; for any nonstandard identifiers, you'll need to define your own proclaim.
-         (ecase declaration-specifier
+         (ecase (first declaration-specifier)
            ((declaration) (mapc #'+declaration (rest declaration-specifier)))
            ((inline) (mapc #'+inline (rest declaration-specifier)))
            ((notinline) (mapc #'+notinline (rest declaration-specifier)))
