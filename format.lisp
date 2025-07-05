@@ -18,7 +18,7 @@
         (let ((incless-extrinsic:*client* fmt-client)
               (destination
                 (if (eql destination 't)
-                    (funcall (clostrum:fdefinition client environment 'symbol-value)
+                    (funcall (clostrum:fdefinition client environment 'cl:symbol-value)
                              '*standard-output*)
                     destination)))
           (apply #'invistra-extrinsic:format destination control-string format-arguments))))))
