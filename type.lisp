@@ -39,8 +39,9 @@
     floating-point-underflow          simple-bit-vector))
 
 (defun resolve-type (client environment type-specifier)
-  (flet ((recur (spec) (resolve-type client environment spec)))
-    (let ((tspec (clostrum:type-expand client environment type-specifier)))
+  (let* ((environment (trucler:global-environment client environment))
+         (tspec (clostrum:type-expand client environment type-specifier)))
+    (flet ((recur (spec) (resolve-type client environment spec)))
       (etypecase tspec
         (class tspec)
         (symbol
