@@ -32,7 +32,9 @@
                nil)))
        (macroexpand-hook () (fdesignator (^symbol-value '*macroexpand-hook*)))
        (^find-class (name &optional (errorp t) env)
-         (clostrum:find-class client (or env environment) name errorp))
+         (clostrum:find-class
+          client (trucler:global-environment client (or env environment))
+          name errorp))
        (^resolve-type (type-specifier &optional env)
          (resolve-type client (or env environment) type-specifier))
        (retest1 (function key more-keys &rest fixed)
