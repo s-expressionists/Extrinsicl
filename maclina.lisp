@@ -13,8 +13,8 @@
          (etypecase definition
            ((cons (eql lambda))
             (maclina.compile:compile definition environment client))
-           ((or compiled-function maclina.machine:bytecode-function
-              maclina.machine:bytecode-closure)
+           ((or compiled-function maclina.machine:function
+              maclina.machine:closure)
             (values definition nil nil))
            (function
             (error "Don't know how to compile interpreted function ~s" definition))))
@@ -51,12 +51,12 @@
            :print (^symbol-value '*compile-print*)))
        (%disassemble (fn)
          (etypecase fn
-           ((or maclina.machine:bytecode-function maclina.machine:bytecode-closure)
-            (maclina.machine:disassemble fn))
+           ((or maclina.machine:function maclina.machine:closure)
+            (maclina.introspect:disassemble fn))
            (function
             (format t "; Don't know how to disassemble non-bytecode function"))
            ((cons (eql lambda))
-            (maclina.machine:disassemble
+            (maclina.introspect:disassemble
              (maclina.compile:compile fn environment client)))
            (t ; function name
             (%disassemble (fdef fn)))))
