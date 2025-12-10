@@ -39,15 +39,22 @@
 (defun default-symbol-setf-expansion (symbol)
   (let ((store (gensym "STORE"))) (values () () `(,store) `(setq ,symbol ,store) symbol)))
 
-(defun default-cons-setf-expansion (cons)
-  (let* ((head (car cons)) (args (cdr cons))
-         (temps (loop for arg in args
-                      when (symbolp arg)
-                        collect (gensym (symbol-name arg))
-                      else collect (gensym "TEMP")))
-         (store (gensym "STORE")))
-    (values temps args (list store)
-            `(funcall #'(setf ,head) ,store ,@temps) `(,head ,@temps))))
+(defun default-cons-setf-expansion (client env cons)
+  (multiple-value-bind (vars vals args)
+      (loop with temp
+            for form in (cdr cons)
+            when (^constantp client env form)
+              collect form into args
+            else do (setf temp (gensym (if (symbolp form)
+                                           (symbol-name form)
+                                           "TEMP")))
+                   and collect temp into vars
+                   and collect form into vals
+                   and collect temp into args
+            finally (return (values vars vals args)))
+    (let ((head (car cons)) (store (gensym "STORE")))
+      (values vars vals (list store)
+              `(funcall #'(setf ,head) ,store ,@args) `(,head ,@args)))))
 
 ;;; Implements CL:GET-SETF-EXPANSION.
 ;;; This is exported so that it can be used in a method on
@@ -81,4 +88,4 @@
               (macroexpand-1 client environment hook place)
             (if expandedp
                 (get-setf-expansion client environment hook expansion)
-                (default-cons-setf-expansion place)))))))
+                (default-cons-setf-expansion client environment place)))))))
