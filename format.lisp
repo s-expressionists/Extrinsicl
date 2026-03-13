@@ -1,6 +1,6 @@
 (in-package #:extrinsicl)
 
-(defclass extrinsicl-format-client (invistra-extrinsic:extrinsic-client
+(defclass extrinsicl-format-client (invistra-extrinsic:client
                                     quaviver/schubfach:client)
   ((%client :initarg :client :reader client)
    (%environment :initarg :environment :reader environment)))
