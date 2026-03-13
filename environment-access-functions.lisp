@@ -591,7 +591,7 @@
                              priority table))
       (write (object &rest keys &key stream &allow-other-keys)
         (rebind-write (lambda ()
-                        (apply #'write :stream (output-stream-designator stream) keys))))
+                        (apply #'write object :stream (output-stream-designator stream) keys))))
       (prin1 (object &optional stream)
         (rebind-write (lambda () (prin1 object (output-stream-designator stream)))))
       (print (object &optional stream)
